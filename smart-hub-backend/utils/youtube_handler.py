@@ -27,7 +27,7 @@ def get_available_languages(url):
         if not video_id:
             return []
         
-        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+        transcript_list = YouTubeTranscriptApi().list(video_id)
         
         languages = []
         
@@ -65,14 +65,14 @@ def get_youtube_transcript(url, language='en'):
         
         try:
             # Try to get transcript in specified language
-            transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=[language])
+            transcript = YouTubeTranscriptApi().fetch(video_id, languages=[language])
         except NoTranscriptFound:
             # If not available, try English or first available
             try:
-                transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=['en'])
+                transcript = YouTubeTranscriptApi().fetch(video_id, languages=['en'])
             except NoTranscriptFound:
                 # Get first available transcript
-                transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+                transcript_list = YouTubeTranscriptApi().list(video_id)
                 if transcript_list.manually_created_transcripts:
                     transcript = transcript_list.manually_created_transcripts[0].fetch()
                 elif transcript_list.generated_transcripts:
@@ -86,12 +86,17 @@ def get_youtube_transcript(url, language='en'):
         # Format transcript with timestamps
         formatted_transcript = []
         plain_text = []
-        
+        raw_segments = []
         for entry in transcript:
-            timestamp = format_timestamp(entry['start'])
-            text = entry['text']
+            timestamp = format_timestamp(entry.start)
+            text = entry.text
             formatted_transcript.append(f"[{timestamp}] {text}")
             plain_text.append(text)
+            raw_segments.append({
+                'text': text,
+                'start': entry.start,
+                'duration': entry.duration
+            })
         
         # Get video metadata
         metadata = get_video_metadata(video_id)
@@ -101,6 +106,7 @@ def get_youtube_transcript(url, language='en'):
             'video_id': video_id,
             'transcript': '\n'.join(formatted_transcript),
             'plain_text': ' '.join(plain_text),
+            'raw_segments': raw_segments,
             'language': language,
             'source': 'youtube_api',
             'metadata': metadata

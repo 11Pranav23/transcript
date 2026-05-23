@@ -308,6 +308,19 @@ export const fetchTranscript = async (req, res, next) => {
         });
       }
 
+      // Normalize transcript items: start (seconds), duration (seconds)
+      if (transcript && Array.isArray(transcript)) {
+        transcript = transcript.map(item => {
+          const start = typeof item.start === 'number' ? item.start : (typeof item.offset === 'number' ? item.offset / 1000 : 0);
+          const duration = typeof item.duration === 'number' ? (item.duration > 200 ? item.duration / 1000 : item.duration) : 0;
+          return {
+            text: (item.text || '').trim(),
+            start,
+            duration
+          };
+        });
+      }
+
       req.io?.emit('progress', { status: 'Processing transcript...', progress: 80 });
 
       const transcriptText = transcript.map(item => item.text).join(' ');
@@ -328,6 +341,40 @@ export const fetchTranscript = async (req, res, next) => {
 
     } catch (transcriptError) {
       console.error(`[Transcript Error] Failed to fetch for ${videoId}:`, transcriptError.message);
+      
+      // Try local Flask backend fallback if running in development (useful when Node scraper is blocked)
+      if (process.env.NODE_ENV !== 'production') {
+        try {
+          console.log(`[Transcript Fallback] ⚡ Attempting local Flask scraper fallback for: ${videoId}`);
+          req.io?.emit('progress', { status: '⚡ Attempting local scraper fallback...', progress: 15 });
+          
+          const flaskResponse = await axios.post('http://localhost:5001/api/transcript/youtube', {
+            url: url,
+            language: language
+          }, { timeout: 15000 });
+          
+          if (flaskResponse.data && flaskResponse.data.success && flaskResponse.data.raw_segments) {
+            console.log(`[Transcript Fallback] ✅ Successfully fetched transcript from local Flask backend!`);
+            
+            const transcriptText = flaskResponse.data.raw_segments.map(item => item.text).join(' ');
+            
+            return res.json({
+              success: true,
+              videoId,
+              language: flaskResponse.data.language || language,
+              isTranslated: false,
+              requestedLanguage: language,
+              transcript: flaskResponse.data.raw_segments,
+              fullText: transcriptText,
+              duration: flaskResponse.data.raw_segments[flaskResponse.data.raw_segments.length - 1]?.start || 0,
+              itemCount: flaskResponse.data.raw_segments.length,
+              source: 'local_flask_fallback'
+            });
+          }
+        } catch (flaskError) {
+          console.error(`[Transcript Fallback Error] Local Flask fallback failed:`, flaskError.message);
+        }
+      }
       
       // Attempt Whisper transcription fallback for ANY transcript failure (disabled, no captions, etc.)
       if (process.env.OPENAI_API_KEY) {
