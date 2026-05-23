@@ -1,6 +1,12 @@
 import axios from 'axios';
 import { YoutubeTranscript } from 'youtube-transcript/dist/youtube-transcript.esm.js';
 import { OpenAI } from 'openai';
+import { exec } from 'child_process';
+import util from 'util';
+import fs from 'fs';
+import path from 'path';
+
+const execPromise = util.promisify(exec);
 
 const validateYouTubeUrl = (url) => {
   const patterns = [
@@ -51,6 +57,81 @@ const bypassFetch = (url, options = {}) => {
     'Cookie': 'CONSENT=YES+cb.20230214-14-p0.en+FX+373' // Bypasses EU consent wall pseudo-429s
   };
   return fetch(url, options);
+};
+
+const downloadAndTranscribeFallback = async (videoId, language, io) => {
+  const uploadsDir = path.join(process.cwd(), 'uploads');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+
+  const outputFilename = `yt_audio_${videoId}.mp3`;
+  const outputPath = path.join(uploadsDir, outputFilename);
+
+  // If the file already exists, delete it first
+  if (fs.existsSync(outputPath)) {
+    try { fs.unlinkSync(outputPath); } catch (e) {}
+  }
+
+  console.log(`[Whisper Fallback] Downloading audio for video: ${videoId}`);
+  io?.emit('progress', { status: 'Downloading audio (Whisper Fallback)...', progress: 30 });
+
+  // Use yt-dlp to download the best audio format and convert to mp3
+  // Since we know python is installed, we can call "python -m yt_dlp"
+  const command = `python -m yt_dlp --format bestaudio --extract-audio --audio-format mp3 --output "${outputPath}" "https://www.youtube.com/watch?v=${videoId}"`;
+
+  try {
+    await execPromise(command);
+    console.log(`[Whisper Fallback] Download completed. File size: ${fs.statSync(outputPath).size}`);
+    io?.emit('progress', { status: 'Transcribing audio via Whisper...', progress: 60 });
+
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OpenAI API key not configured for Whisper fallback');
+    }
+
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const audioBuffer = fs.readFileSync(outputPath);
+
+    // Create a file-like object for OpenAI
+    const audioFile = new File([audioBuffer], outputFilename, {
+      type: 'audio/mp3'
+    });
+
+    const transcriptResponse = await openai.audio.transcriptions.create({
+      file: audioFile,
+      model: 'whisper-1',
+      language: language === 'auto' ? undefined : language,
+      response_format: 'verbose_json'
+    });
+
+    // Clean up file
+    try { fs.unlinkSync(outputPath); } catch (e) {}
+
+    if (!transcriptResponse.segments || transcriptResponse.segments.length === 0) {
+      throw new Error('No transcript segments returned from Whisper');
+    }
+
+    // Map segments to the format expected by the frontend
+    const transcript = transcriptResponse.segments.map(seg => ({
+      text: seg.text,
+      start: seg.start,
+      duration: seg.end - seg.start
+    }));
+
+    return {
+      transcript,
+      language: transcriptResponse.language || 'en',
+      source: 'whisper_fallback'
+    };
+
+  } catch (err) {
+    console.error('[Whisper Fallback Error]:', err.message);
+    // Cleanup on error
+    if (fs.existsSync(outputPath)) {
+      try { fs.unlinkSync(outputPath); } catch (e) {}
+    }
+    throw err;
+  }
 };
 
 export const fetchTranscript = async (req, res, next) => {
@@ -193,6 +274,31 @@ export const fetchTranscript = async (req, res, next) => {
     } catch (transcriptError) {
       console.error(`[Transcript Error] Failed to fetch for ${videoId}:`, transcriptError.message);
       
+      // Attempt Whisper transcription fallback if OpenAI key is configured
+      if (process.env.OPENAI_API_KEY) {
+        try {
+          console.log(`[Transcript Fallback] Attempting Whisper transcription fallback for: ${videoId}`);
+          const fallbackResult = await downloadAndTranscribeFallback(videoId, language, req.io);
+          
+          const transcriptText = fallbackResult.transcript.map(item => item.text).join(' ');
+          
+          return res.json({
+            success: true,
+            videoId,
+            language: fallbackResult.language,
+            isTranslated: false,
+            requestedLanguage: language,
+            transcript: fallbackResult.transcript,
+            fullText: transcriptText,
+            duration: fallbackResult.transcript[fallbackResult.transcript.length - 1]?.start || 0,
+            itemCount: fallbackResult.transcript.length,
+            source: 'whisper_fallback'
+          });
+        } catch (fallbackError) {
+          console.error(`[Transcript Fallback Error] Whisper fallback failed:`, fallbackError.message);
+        }
+      }
+
       // Provide more detailed error messages based on the error
       const errorMessage = (transcriptError.message || '').toLowerCase();
       
