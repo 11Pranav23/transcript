@@ -26,9 +26,9 @@ const corsOrigins = [
   'http://localhost:3002',
   'http://127.0.0.1:3000',
   'http://127.0.0.1:3001',
-  'http://127.0.0.1:3002',
+  'https://youtubetotranscriptpro1.netlify.app',
   process.env.FRONTEND_URL
-].filter(Boolean);
+].filter(Boolean).map(origin => origin.replace(/\/$/, ''));
 
 const corsOptions = {
   origin: (origin, callback) => {
@@ -70,7 +70,7 @@ app.get('/api/health', (req, res) => {
 
 // Root endpoint
 app.get('/', (req, res) => {
-  res.json({ 
+  res.json({
     message: 'YouTube Transcript Generator Backend API',
     version: '1.0.0',
     status: 'running',
@@ -112,7 +112,7 @@ app.use(errorHandler);
 // 404 handler
 app.use((req, res) => {
   console.log(`404 - Route not found: ${req.method} ${req.originalUrl}`);
-  res.status(404).json({ 
+  res.status(404).json({
     error: 'Route not found',
     method: req.method,
     path: req.originalUrl,
@@ -144,7 +144,7 @@ app.use((req, res) => {
 // Socket.IO connection handling
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
-  
+
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
   });
