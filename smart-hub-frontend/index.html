@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Transcript Hub - AI-Powered Transcription</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-bg: #0f172a;
+            --secondary-bg: #1e293b;
+            --card-bg: #334155;
+            --border-color: #475569;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --accent-blue: #3b82f6;
+            --accent-purple: #a855f7;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-orange: #f97316;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--primary-bg) 0%, #1a1f35 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+            animation: slideDown 0.6s ease-out;
+        }
+
+        .header h1 {
+            font-size: 3em;
+            background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1.1em;
+            margin-bottom: 20px;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid var(--border-color);
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+
+        .tab-button {
+            padding: 12px 24px;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab-button:hover {
+            color: var(--text-primary);
+        }
+
+        .tab-button.active {
+            color: var(--accent-blue);
+            border-bottom-color: var(--accent-blue);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--accent-blue);
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(59, 130, 246, 0.1);
+        }
+
+        .card h2 {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Input Groups */
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="password"],
+        input[type="file"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            background: var(--secondary-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus,
+        input[type="file"]:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--secondary-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent-purple);
+            color: var(--accent-purple);
+        }
+
+        .btn-success {
+            background: var(--accent-green);
+            color: white;
+        }
+
+        .btn-success:hover {
+            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-danger {
+            background: var(--accent-red);
+            color: white;
+        }
+
+        /* File Upload Area */
+        .upload-area {
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: rgba(51, 65, 85, 0.3);
+        }
+
+        .upload-area:hover,
+        .upload-area.dragover {
+            border-color: var(--accent-blue);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .upload-area input[type="file"] {
+            display: none;
+        }
+
+        .upload-area p {
+            margin: 10px 0;
+            color: var(--text-secondary);
+        }
+
+        /* Output Section */
+        .output-section {
+            background: var(--secondary-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .transcript-text {
+            line-height: 1.8;
+            color: var(--text-secondary);
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .keyword-highlight {
+            background: rgba(168, 85, 247, 0.2);
+            padding: 2px 4px;
+            border-radius: 3px;
+            color: #e9d5ff;
+            font-weight: 500;
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(59, 130, 246, 0.3);
+            border-top-color: var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Status Messages */
+        .message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .message.error {
+            background: rgba(239, 68, 68, 0.1);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .message.success {
+            background: rgba(16, 185, 129, 0.1);
+            color: #86efac;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .message.info {
+            background: rgba(59, 130, 246, 0.1);
+            color: #93c5fd;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        /* Statistics */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: var(--secondary-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: var(--accent-blue);
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        /* Keywords */
+        .keywords {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .keyword-tag {
+            background: rgba(168, 85, 247, 0.2);
+            color: #e9d5ff;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            border: 1px solid rgba(168, 85, 247, 0.4);
+        }
+
+        /* Export Buttons */
+        .export-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .export-buttons .btn {
+            flex: 1;
+            min-width: 120px;
+            justify-content: center;
+        }
+
+        /* Recording Controls */
+        .recording-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .recording-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--accent-red);
+            font-weight: 600;
+        }
+
+        .recording-dot {
+            width: 12px;
+            height: 12px;
+            background: var(--accent-red);
+            border-radius: 50%;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .card {
+                padding: 20px;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .export-buttons .btn {
+                font-size: 0.9em;
+                padding: 10px 15px;
+            }
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--secondary-bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-blue);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🎙️ Smart Transcript Hub</h1>
+            <p>Convert YouTube videos, audio files, and voice recordings into searchable transcripts</p>
+        </div>
+
+        <!-- Messages -->
+        <div id="messageContainer"></div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-button active" data-tab="youtube">
+                📺 YouTube URL
+            </button>
+            <button class="tab-button" data-tab="upload">
+                📁 Upload File
+            </button>
+            <button class="tab-button" data-tab="recording">
+                🎙️ Record Audio
+            </button>
+            <button class="tab-button" data-tab="output">
+                📄 Results
+            </button>
+        </div>
+
+        <!-- YouTube Tab -->
+        <div id="youtube" class="tab-content active">
+            <div class="card">
+                <h2>🔗 YouTube Transcript</h2>
+                <div class="input-group">
+                    <label for="youtubeUrl">YouTube URL</label>
+                    <input type="text" id="youtubeUrl" placeholder="https://www.youtube.com/watch?v=..." />
+                </div>
+
+                <div class="input-group">
+                    <label for="youtubeLang">Language (optional)</label>
+                    <select id="youtubeLang">
+                        <option value="">Auto-detect</option>
+                        <option value="en">English</option>
+                        <option value="es">Spanish</option>
+                        <option value="fr">French</option>
+                        <option value="de">German</option>
+                        <option value="zh">Chinese</option>
+                        <option value="ja">Japanese</option>
+                    </select>
+                </div>
+
+                <button class="btn btn-primary" onclick="fetchYouTubeTranscript()">
+                    <span class="loading" id="youtubeLoading" style="display: none;"></span>
+                    Fetch Transcript
+                </button>
+            </div>
+        </div>
+
+        <!-- Upload Tab -->
+        <div id="upload" class="tab-content">
+            <div class="card">
+                <h2>📂 Upload Audio/Video</h2>
+
+                <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                    <p>📤 Drag and drop your file here</p>
+                    <p>or click to browse</p>
+                    <p style="font-size: 0.9em; color: var(--text-secondary); margin-top: 10px;">
+                        Supported: MP3, WAV, M4A, MP4 (Max 500MB)
+                    </p>
+                    <input type="file" id="fileInput" accept=".mp3,.wav,.m4a,.mp4,.flac,.ogg,.webm" />
+                </div>
+
+                <div id="uploadFileName" style="margin-top: 15px; display: none;">
+                    <strong>Selected:</strong> <span id="fileName"></span>
+                </div>
+
+                <button class="btn btn-primary" onclick="uploadFile()" style="margin-top: 20px;">
+                    <span class="loading" id="uploadLoading" style="display: none;"></span>
+                    Transcribe File
+                </button>
+            </div>
+        </div>
+
+        <!-- Recording Tab -->
+        <div id="recording" class="tab-content">
+            <div class="card">
+                <h2>🎤 Record Audio</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                    Record your voice directly in the browser and get it transcribed instantly.
+                </p>
+
+                <div class="recording-controls">
+                    <button class="btn btn-success" id="recordBtn" onclick="startRecording()">
+                        🔴 Start Recording
+                    </button>
+                    <button class="btn btn-danger" id="stopBtn" onclick="stopRecording()" style="display: none;">
+                        ⏹️ Stop Recording
+                    </button>
+                </div>
+
+                <div id="recordingIndicator" style="display: none; margin-top: 15px;">
+                    <div class="recording-indicator">
+                        <div class="recording-dot"></div>
+                        Recording in progress...
+                    </div>
+                    <div id="recordingTime" style="margin-top: 10px; color: var(--text-secondary);">
+                        Time: 00:00
+                    </div>
+                </div>
+
+                <div id="recordedAudioPreview" style="display: none; margin-top: 20px;">
+                    <label>Recorded Audio Preview:</label>
+                    <audio id="audioPreview" controls style="width: 100%; margin-top: 10px;"></audio>
+                    <button class="btn btn-primary" onclick="transcribeRecording()" style="margin-top: 15px;">
+                        <span class="loading" id="recordingLoading" style="display: none;"></span>
+                        Transcribe Recording
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Output Tab -->
+        <div id="output" class="tab-content">
+            <div class="card">
+                <h2>📋 Transcript Output</h2>
+
+                <div id="noOutput" style="text-align: center; color: var(--text-secondary); padding: 40px 0;">
+                    <p>No transcript generated yet. Use the tabs above to create a transcript.</p>
+                </div>
+
+                <div id="outputContent" style="display: none;">
+                    <!-- Transcript Text -->
+                    <div class="output-section">
+                        <div class="transcript-text" id="transcriptText"></div>
+                    </div>
+
+                    <!-- Statistics -->
+                    <div class="stats-grid" id="statsGrid"></div>
+
+                    <!-- Keywords -->
+                    <div id="keywordsSection" style="margin-top: 20px; display: none;">
+                        <label>Top Keywords:</label>
+                        <div class="keywords" id="keywordsList"></div>
+                    </div>
+
+                    <!-- Language Info -->
+                    <div id="languageSection" style="margin-top: 20px;">
+                        <p>
+                            <strong>Detected Language:</strong>
+                            <span id="detectedLanguage">English</span>
+                        </p>
+                    </div>
+
+                    <!-- Export Buttons -->
+                    <div class="export-buttons">
+                        <button class="btn btn-secondary" onclick="copyToClipboard()">📋 Copy</button>
+                        <button class="btn btn-secondary" onclick="exportAs('txt')">📄 TXT</button>
+                        <button class="btn btn-secondary" onclick="exportAs('srt')">📹 SRT</button>
+                        <button class="btn btn-secondary" onclick="exportAs('vtt')">📹 VTT</button>
+                        <button class="btn btn-secondary" onclick="exportAs('pdf')">📕 PDF</button>
+                    </div>
+
+                    <!-- Translation Section -->
+                    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border-color);">
+                        <h3 style="margin-bottom: 15px;">🌍 Translate</h3>
+                        <div style="display: flex; gap: 10px;">
+                            <select id="translateLanguage" style="flex: 1;">
+                                <option value="en">English</option>
+                                <option value="es">Spanish</option>
+                                <option value="fr">French</option>
+                                <option value="de">German</option>
+                                <option value="zh">Chinese</option>
+                                <option value="ja">Japanese</option>
+                                <option value="ar">Arabic</option>
+                            </select>
+                            <button class="btn btn-primary" onclick="translateTranscript()" style="min-width: 150px;">
+                                <span class="loading" id="translateLoading" style="display: none;"></span>
+                                Translate
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE_URL = 'http://localhost:5001/api';
+
+        // Global state
+        let currentTranscript = '';
+        let currentLanguage = 'en';
+        let mediaRecorder = null;
+        let recordingStartTime = null;
+        let recordingTimer = null;
+
+        // Tab switching
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', function() {
+                const tabName = this.dataset.tab;
+                document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+                document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                document.getElementById(tabName).classList.add('active');
+                this.classList.add('active');
+            });
+        });
+
+        // File upload handling
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            fileInput.files = e.dataTransfer.files;
+            updateFileName();
+        });
+
+        fileInput.addEventListener('change', updateFileName);
+
+        function updateFileName() {
+            if (fileInput.files.length > 0) {
+                document.getElementById('fileName').textContent = fileInput.files[0].name;
+                document.getElementById('uploadFileName').style.display = 'block';
+            }
+        }
+
+        // YouTube Transcript
+        async function fetchYouTubeTranscript() {
+            const url = document.getElementById('youtubeUrl').value.trim();
+            const lang = document.getElementById('youtubeLang').value || 'en';
+
+            if (!url) {
+                showMessage('Please enter a YouTube URL', 'error');
+                return;
+            }
+
+            showLoading('youtubeLoading', true);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/transcript/youtube`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, language: lang })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    currentTranscript = data.plain_text || data.transcript;
+                    currentLanguage = data.language;
+                    displayTranscript(currentTranscript, data.language);
+                    showMessage('Transcript fetched successfully!', 'success');
+                    switchTab('output');
+                } else {
+                    showMessage(data.error || 'Failed to fetch transcript', 'error');
+                }
+            } catch (error) {
+                showMessage(`Error: ${error.message}`, 'error');
+            } finally {
+                showLoading('youtubeLoading', false);
+            }
+        }
+
+        // Upload File
+        async function uploadFile() {
+            const file = fileInput.files[0];
+            if (!file) {
+                showMessage('Please select a file', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            showLoading('uploadLoading', true);
+
+            try {
+                const endpoint = file.type.startsWith('video/') ? 'video' : 'upload';
+                const response = await fetch(`${API_BASE_URL}/transcribe/${endpoint}`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    currentTranscript = data.transcript;
+                    currentLanguage = data.language;
+                    displayTranscript(currentTranscript, data.language);
+                    showMessage('File transcribed successfully!', 'success');
+                    switchTab('output');
+                } else {
+                    showMessage(data.error || 'Transcription failed', 'error');
+                }
+            } catch (error) {
+                showMessage(`Error: ${error.message}`, 'error');
+            } finally {
+                showLoading('uploadLoading', false);
+            }
+        }
+
+        // Recording Functions
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+
+                mediaRecorder.ondataavailable = (event) => {
+                    const audioBlob = new Blob([event.data], { type: 'audio/wav' });
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    document.getElementById('audioPreview').src = audioUrl;
+                    document.getElementById('recordedAudioPreview').style.display = 'block';
+                };
+
+                mediaRecorder.start();
+                recordingStartTime = Date.now();
+                updateRecordingTime();
+
+                document.getElementById('recordBtn').style.display = 'none';
+                document.getElementById('stopBtn').style.display = 'block';
+                document.getElementById('recordingIndicator').style.display = 'block';
+
+                recordingTimer = setInterval(updateRecordingTime, 100);
+            } catch (error) {
+                showMessage(`Microphone access denied: ${error.message}`, 'error');
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder) {
+                mediaRecorder.stop();
+                clearInterval(recordingTimer);
+            }
+
+            document.getElementById('recordBtn').style.display = 'block';
+            document.getElementById('stopBtn').style.display = 'none';
+            document.getElementById('recordingIndicator').style.display = 'none';
+        }
+
+        function updateRecordingTime() {
+            if (recordingStartTime) {
+                const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+                const minutes = String(Math.floor(elapsed / 60)).padStart(2, '0');
+                const seconds = String(elapsed % 60).padStart(2, '0');
+                document.getElementById('recordingTime').textContent = `Time: ${minutes}:${seconds}`;
+            }
+        }
+
+        async function transcribeRecording() {
+            const audio = document.getElementById('audioPreview');
+            if (!audio.src) {
+                showMessage('No recording available', 'error');
+                return;
+            }
+
+            showLoading('recordingLoading', true);
+
+            try {
+                const blob = await fetch(audio.src).then(r => r.blob());
+                const formData = new FormData();
+                formData.append('audio', blob);
+
+                const response = await fetch(`${API_BASE_URL}/transcribe/recording`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    currentTranscript = data.transcript;
+                    currentLanguage = data.language;
+                    displayTranscript(currentTranscript, data.language);
+                    showMessage('Recording transcribed successfully!', 'success');
+                    switchTab('output');
+                } else {
+                    showMessage(data.error || 'Transcription failed', 'error');
+                }
+            } catch (error) {
+                showMessage(`Error: ${error.message}`, 'error');
+            } finally {
+                showLoading('recordingLoading', false);
+            }
+        }
+
+        // Display Transcript
+        function displayTranscript(transcript, language) {
+            document.getElementById('noOutput').style.display = 'none';
+            document.getElementById('outputContent').style.display = 'block';
+            document.getElementById('transcriptText').textContent = transcript;
+            document.getElementById('detectedLanguage').textContent = language || 'English';
+
+            // Calculate stats
+            const words = transcript.split(/\s+/).length;
+            const chars = transcript.length;
+            const readingTime = Math.ceil((words / 200));
+
+            // Extract keywords
+            const keywordsList = extractKeywords(transcript);
+
+            // Update stats
+            document.getElementById('statsGrid').innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${words}</div>
+                    <div class="stat-label">Words</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${chars}</div>
+                    <div class="stat-label">Characters</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${readingTime}</div>
+                    <div class="stat-label">Min Read</div>
+                </div>
+            `;
+
+            if (keywordsList.length > 0) {
+                document.getElementById('keywordsSection').style.display = 'block';
+                document.getElementById('keywordsList').innerHTML = keywordsList
+                    .slice(0, 10)
+                    .map(kw => `<span class="keyword-tag">${kw}</span>`)
+                    .join('');
+            }
+        }
+
+        function extractKeywords(text) {
+            const stopWords = new Set([
+                'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
+                'of', 'is', 'are', 'was', 'were', 'be', 'been', 'have', 'has', 'had'
+            ]);
+
+            const words = text.toLowerCase().split(/\s+/);
+            const frequencies = {};
+
+            words.forEach(word => {
+                if (!stopWords.has(word) && word.length > 3) {
+                    frequencies[word] = (frequencies[word] || 0) + 1;
+                }
+            });
+
+            return Object.entries(frequencies)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10)
+                .map(([word]) => word);
+        }
+
+        // Export Functions
+        async function exportAs(format) {
+            const filename = `transcript_${Date.now()}`;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/export/${format}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ transcript: currentTranscript, filename })
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${filename}.${format}`;
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    showMessage(`Downloaded as ${format.toUpperCase()}`, 'success');
+                } else {
+                    showMessage('Export failed', 'error');
+                }
+            } catch (error) {
+                showMessage(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        function copyToClipboard() {
+            navigator.clipboard.writeText(currentTranscript).then(() => {
+                showMessage('Copied to clipboard!', 'success');
+            }).catch(() => {
+                showMessage('Failed to copy', 'error');
+            });
+        }
+
+        // Translation
+        async function translateTranscript() {
+            const targetLang = document.getElementById('translateLanguage').value;
+            showLoading('translateLoading', true);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/language/translate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: currentTranscript, target_language: targetLang })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('transcriptText').textContent = data.translated;
+                    showMessage('Translation complete!', 'success');
+                } else {
+                    showMessage(data.error || 'Translation failed', 'error');
+                }
+            } catch (error) {
+                showMessage(`Error: ${error.message}`, 'error');
+            } finally {
+                showLoading('translateLoading', false);
+            }
+        }
+
+        // Utilities
+        function showMessage(message, type) {
+            const container = document.getElementById('messageContainer');
+            const messageEl = document.createElement('div');
+            messageEl.className = `message ${type}`;
+            messageEl.innerHTML = `
+                <span>${type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️'}</span>
+                <span>${message}</span>
+            `;
+
+            container.appendChild(messageEl);
+            setTimeout(() => messageEl.remove(), 5000);
+        }
+
+        function showLoading(elementId, show) {
+            const el = document.getElementById(elementId);
+            if (el) {
+                el.style.display = show ? 'inline-block' : 'none';
+            }
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+        }
+    </script>
+</body>
+</html>
