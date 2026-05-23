@@ -59,31 +59,53 @@ const bypassFetch = (url, options = {}) => {
   return fetch(url, options);
 };
 
+const WHISPER_MAX_BYTES = 24 * 1024 * 1024; // 24 MB — safely under OpenAI's 25 MB limit
+
 const downloadAndTranscribeFallback = async (videoId, language, io) => {
   const uploadsDir = path.join(process.cwd(), 'uploads');
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
   }
 
-  const outputFilename = `yt_audio_${videoId}.mp3`;
-  const outputPath = path.join(uploadsDir, outputFilename);
+  // Use %(ext)s so yt-dlp picks the correct extension automatically
+  const outputTemplate = path.join(uploadsDir, `yt_audio_${videoId}.%(ext)s`);
+  const filePrefix = `yt_audio_${videoId}.`;
 
-  // If the file already exists, delete it first
-  if (fs.existsSync(outputPath)) {
-    try { fs.unlinkSync(outputPath); } catch (e) {}
-  }
+  // Cleanup any stale files from previous attempts
+  fs.readdirSync(uploadsDir)
+    .filter(f => f.startsWith(filePrefix))
+    .forEach(f => { try { fs.unlinkSync(path.join(uploadsDir, f)); } catch (e) {} });
 
-  console.log(`[Whisper Fallback] Downloading audio for video: ${videoId}`);
-  io?.emit('progress', { status: 'Downloading audio (Whisper Fallback)...', progress: 30 });
+  console.log(`[Whisper Fallback] ⚡ Fast-downloading audio for video: ${videoId}`);
+  io?.emit('progress', { status: '⚡ Downloading audio for transcription...', progress: 25 });
 
-  // Use yt-dlp to download the best audio format and convert to mp3
-  // Since we know python is installed, we can call "python -m yt_dlp"
-  const command = `python -m yt_dlp --format bestaudio --extract-audio --audio-format mp3 --output "${outputPath}" "https://www.youtube.com/watch?v=${videoId}"`;
+  // Download WORST quality audio (tiny file), no re-encode = fast!
+  // worstaudio: smallest available audio stream (opus/m4a/webm)
+  // --max-filesize: hard cap so huge videos don’t exhaust disk/time
+  const command = [
+    'python -m yt_dlp',
+    `--format "worstaudio/bestaudio"`,
+    '--no-playlist',
+    '--no-warnings',
+    `--max-filesize ${WHISPER_MAX_BYTES}`,
+    `-o "${outputTemplate}"`,
+    `"https://www.youtube.com/watch?v=${videoId}"`
+  ].join(' ');
 
   try {
-    await execPromise(command);
-    console.log(`[Whisper Fallback] Download completed. File size: ${fs.statSync(outputPath).size}`);
-    io?.emit('progress', { status: 'Transcribing audio via Whisper...', progress: 60 });
+    await execPromise(command, { timeout: 120000 }); // 2 min timeout
+
+    // Find the actual downloaded file (extension may vary: .webm, .m4a, .opus, .mp4 ...)
+    const downloadedFiles = fs.readdirSync(uploadsDir).filter(f => f.startsWith(filePrefix));
+    if (downloadedFiles.length === 0) {
+      throw new Error('Audio download failed — output file not found');
+    }
+    const outputPath = path.join(uploadsDir, downloadedFiles[0]);
+    const ext = path.extname(outputPath).slice(1) || 'webm';
+
+    const fileSize = fs.statSync(outputPath).size;
+    console.log(`[Whisper Fallback] ✅ Download done. File: ${downloadedFiles[0]}, Size: ${(fileSize / 1024 / 1024).toFixed(1)} MB`);
+    io?.emit('progress', { status: '🤖 Transcribing with AI (Whisper)...', progress: 55 });
 
     if (!process.env.OPENAI_API_KEY) {
       throw new Error('OpenAI API key not configured for Whisper fallback');
@@ -92,10 +114,13 @@ const downloadAndTranscribeFallback = async (videoId, language, io) => {
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const audioBuffer = fs.readFileSync(outputPath);
 
-    // Create a file-like object for OpenAI
-    const audioFile = new File([audioBuffer], outputFilename, {
-      type: 'audio/mp3'
-    });
+    // Pick correct MIME type for the file format
+    const mimeType = ext === 'mp4' ? 'audio/mp4'
+      : ext === 'mp3' ? 'audio/mpeg'
+      : ext === 'm4a' ? 'audio/mp4'
+      : 'audio/webm';
+
+    const audioFile = new File([audioBuffer], `audio.${ext}`, { type: mimeType });
 
     const transcriptResponse = await openai.audio.transcriptions.create({
       file: audioFile,
@@ -104,32 +129,42 @@ const downloadAndTranscribeFallback = async (videoId, language, io) => {
       response_format: 'verbose_json'
     });
 
-    // Clean up file
+    // Clean up file immediately after reading
     try { fs.unlinkSync(outputPath); } catch (e) {}
 
     if (!transcriptResponse.segments || transcriptResponse.segments.length === 0) {
+      // Try to return text as a single segment if no segments
+      if (transcriptResponse.text) {
+        return {
+          transcript: [{ text: transcriptResponse.text, start: 0, duration: 0 }],
+          language: transcriptResponse.language || language || 'en',
+          source: 'whisper_fallback'
+        };
+      }
       throw new Error('No transcript segments returned from Whisper');
     }
 
     // Map segments to the format expected by the frontend
     const transcript = transcriptResponse.segments.map(seg => ({
-      text: seg.text,
+      text: seg.text.trim(),
       start: seg.start,
       duration: seg.end - seg.start
     }));
 
+    console.log(`[Whisper Fallback] ✅ Transcribed ${transcript.length} segments`);
+
     return {
       transcript,
-      language: transcriptResponse.language || 'en',
+      language: transcriptResponse.language || language || 'en',
       source: 'whisper_fallback'
     };
 
   } catch (err) {
     console.error('[Whisper Fallback Error]:', err.message);
-    // Cleanup on error
-    if (fs.existsSync(outputPath)) {
-      try { fs.unlinkSync(outputPath); } catch (e) {}
-    }
+    // Cleanup any leftover files on error
+    fs.readdirSync(uploadsDir)
+      .filter(f => f.startsWith(filePrefix))
+      .forEach(f => { try { fs.unlinkSync(path.join(uploadsDir, f)); } catch (e) {} });
     throw err;
   }
 };
@@ -274,10 +309,11 @@ export const fetchTranscript = async (req, res, next) => {
     } catch (transcriptError) {
       console.error(`[Transcript Error] Failed to fetch for ${videoId}:`, transcriptError.message);
       
-      // Attempt Whisper transcription fallback if OpenAI key is configured
+      // Attempt Whisper transcription fallback for ANY transcript failure (disabled, no captions, etc.)
       if (process.env.OPENAI_API_KEY) {
         try {
-          console.log(`[Transcript Fallback] Attempting Whisper transcription fallback for: ${videoId}`);
+          console.log(`[Transcript Fallback] ⚡ Attempting fast Whisper fallback for: ${videoId}`);
+          req.io?.emit('progress', { status: '⚡ Standard transcript unavailable — trying AI fallback...', progress: 20 });
           const fallbackResult = await downloadAndTranscribeFallback(videoId, language, req.io);
           
           const transcriptText = fallbackResult.transcript.map(item => item.text).join(' ');
@@ -296,6 +332,8 @@ export const fetchTranscript = async (req, res, next) => {
           });
         } catch (fallbackError) {
           console.error(`[Transcript Fallback Error] Whisper fallback failed:`, fallbackError.message);
+          // Surface the fallback error to the user for better debugging
+          req.io?.emit('progress', { status: `❌ AI fallback failed: ${fallbackError.message}`, progress: 0 });
         }
       }
 
