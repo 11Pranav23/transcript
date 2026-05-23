@@ -80,20 +80,40 @@ const downloadAndTranscribeFallback = async (videoId, language, io) => {
   io?.emit('progress', { status: '⚡ Downloading audio for transcription...', progress: 25 });
 
   // Download WORST quality audio (tiny file), no re-encode = fast!
-  // worstaudio: smallest available audio stream (opus/m4a/webm)
-  // --max-filesize: hard cap so huge videos don’t exhaust disk/time
-  const command = [
-    'python -m yt_dlp',
-    `--format "worstaudio/bestaudio"`,
-    '--no-playlist',
-    '--no-warnings',
-    `--max-filesize ${WHISPER_MAX_BYTES}`,
-    `-o "${outputTemplate}"`,
-    `"https://www.youtube.com/watch?v=${videoId}"`
-  ].join(' ');
+  // Try running with 'python', then fallback to 'python3', and finally to global 'yt-dlp'
+  let successDownload = false;
+  let lastError = null;
+
+  const runDownload = async (cmdPrefix) => {
+    const cmd = `${cmdPrefix} --format "worstaudio/bestaudio" --no-playlist --no-warnings --max-filesize ${WHISPER_MAX_BYTES} -o "${outputTemplate}" "https://www.youtube.com/watch?v=${videoId}"`;
+    await execPromise(cmd, { timeout: 120000 });
+  };
 
   try {
-    await execPromise(command, { timeout: 120000 }); // 2 min timeout
+    await runDownload('python -m yt_dlp');
+    successDownload = true;
+  } catch (err) {
+    console.log(`[Whisper Fallback] 'python -m yt_dlp' failed, trying 'python3 -m yt_dlp'...`);
+    lastError = err;
+    try {
+      await runDownload('python3 -m yt_dlp');
+      successDownload = true;
+    } catch (err3) {
+      console.log(`[Whisper Fallback] 'python3 -m yt_dlp' failed, trying global 'yt-dlp'...`);
+      lastError = err3;
+      try {
+        await runDownload('yt-dlp');
+        successDownload = true;
+      } catch (errGlobal) {
+        lastError = errGlobal;
+      }
+    }
+  }
+
+  try {
+    if (!successDownload) {
+      throw new Error(`Audio download failed: ${lastError ? lastError.message : 'Unknown error'}`);
+    }
 
     // Find the actual downloaded file (extension may vary: .webm, .m4a, .opus, .mp4 ...)
     const downloadedFiles = fs.readdirSync(uploadsDir).filter(f => f.startsWith(filePrefix));
