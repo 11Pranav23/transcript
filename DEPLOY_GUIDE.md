@@ -69,4 +69,31 @@ To prevent CORS issues, you need to tell your backend to accept requests from yo
 
 ---
 
+## 🔍 Troubleshooting: "Cannot connect to server" Error
+
+If your deployed website shows:
+`❌ Cannot connect to server. Make sure the backend is running on port 5000.`
+
+It means the frontend is trying to connect to a local port instead of your deployed Render URL. Follow these steps to fix it:
+
+### 1. Trigger a New Deploy on Vercel (⚠️ Most Common Cause)
+React environment variables are injected **at build time** (when the code is compiled), not at runtime. If you added `REACT_APP_API_URL` in Vercel settings *after* your first deploy, Vercel is still using the old build.
+- Go to your project page on Vercel.
+- Navigate to the **"Deployments"** tab.
+- Click the **three dots (...)** next to your latest deployment.
+- Select **"Redeploy"** and click **"Redeploy"** again to build with the new environment variables.
+
+### 2. Check the Environment Variable Names & Formats
+- In **Vercel**:
+  - Key must be exactly: `REACT_APP_API_URL`
+  - Value must be exactly: `https://your-backend-app.onrender.com` (Do **NOT** add a trailing slash `/` and do **NOT** add `/api`).
+- In **Render**:
+  - Key must be exactly: `FRONTEND_URL`
+  - Value must be exactly: `https://your-site-name.vercel.app` (Match your Vercel URL, no trailing slash).
+
+### 3. Render Wake-up Time
+Render's free tier puts your backend server to sleep after 15 minutes of inactivity. When you visit the site for the first time, it can take up to 50 seconds to wake up. Wait 1 minute, refresh the page, and try again.
+
+---
+
 🎉 **Done! Your React app and Express backend are now successfully connected and running in production.**

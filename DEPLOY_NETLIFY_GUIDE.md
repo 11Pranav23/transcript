@@ -1,0 +1,98 @@
+# 🚀 Simple Deployment Guide: Netlify & Render
+
+This guide explains how to deploy the YouTube Transcript Generator to **Render** (for the Node.js backend) and **Netlify** (for the React frontend).
+
+---
+
+## 🖥️ Part 1: Deploying the Backend on Render
+
+Render is ideal for hosting the Express backend server.
+
+### Steps:
+1. **Sign Up / Sign In**: Go to [Render](https://render.com/) and log in using GitHub.
+2. **Create New Web Service**:
+   - Click the **"New +"** button at the top right and select **"Web Service"**.
+   - Connect your GitHub repository containing the project.
+3. **Configure Service Settings**:
+   - **Name**: `yt-transcript-backend` (or any name you prefer)
+   - **Region**: Select the closest region to your users
+   - **Branch**: `main`
+   - **Root Directory**: `backend` (⚠️ *Crucial: do not leave empty!*)
+   - **Runtime**: `Node`
+   - **Build Command**: `npm install`
+   - **Start Command**: `node server.js`
+4. **Select Plan**: Choose the **Free** plan.
+5. **Add Environment Variables**:
+   - Click **"Advanced"** and add:
+     - `PORT` = `5000`
+     - `NODE_ENV` = `production`
+     - `YOUTUBE_API_KEY` = `[Your YouTube API Key]`
+     - `OPENAI_API_KEY` = `[Your OpenAI API Key]`
+     - `FRONTEND_URL` = `https://your-frontend-app.netlify.app` *(Note: You will update this URL once you deploy to Netlify below).*
+6. **Deploy**: Click **"Create Web Service"**.
+7. **Copy Backend URL**: Once deployed, copy the service URL provided at the top left of the dashboard (e.g. `https://yt-transcript-backend.onrender.com`).
+
+---
+
+## 🎨 Part 2: Deploying the Frontend on Netlify
+
+Netlify is optimized for React static frontends.
+
+### Steps:
+1. **Sign Up / Sign In**: Go to [Netlify](https://www.netlify.com/) and log in using GitHub.
+2. **Create a New Site**:
+   - Click **"Add new site"** > **"Import an existing project"**.
+   - Select and authenticate with **GitHub**, then select your repository.
+3. **Configure Build Settings**:
+   - **Base directory**: Type **`frontend`** (⚠️ *Crucial: do not leave empty!*)
+   - **Build command**: Type **`npm run build`**
+   - **Publish directory**: Type **`build`** (this is where Netlify looks inside the `frontend` base directory)
+4. **Add Environment Variables**:
+   - Click **"Add environment variables"** > **"New variable"**.
+   - Add:
+     - **Key**: `REACT_APP_API_URL`
+     - **Value**: `https://your-backend-app.onrender.com` *(Paste the Render URL you copied in Part 1. Do NOT include a trailing slash, and do NOT append `/api` as the frontend handles this automatically).*
+5. **Deploy**: Click **"Deploy site"**.
+6. **Get Frontend URL**: Netlify will compile your React app and assign it a production URL (e.g. `https://your-site-name.netlify.app`).
+
+---
+
+## 🔄 Part 3: Final Integration (Link Backend to Frontend)
+
+To prevent CORS issues, you must tell your backend to accept requests from your new frontend URL.
+
+1. Go back to your **Render Dashboard** for the backend service.
+2. Navigate to **Environment**.
+3. Edit the `FRONTEND_URL` variable:
+   - Change it to your new Netlify URL (e.g., `https://your-site-name.netlify.app`).
+4. Save Changes. Render will redeploy the backend with the new configuration.
+
+---
+
+## 🔍 Troubleshooting: "Cannot connect to server" Error
+
+If your deployed website shows:
+`❌ Cannot connect to server. Make sure the backend is running on port 5000.`
+
+It means the frontend is trying to connect to a local port instead of your deployed Render URL. Follow these steps to fix it:
+
+### 1. Trigger a New Deploy on Netlify (⚠️ Most Common Cause)
+React environment variables are injected **at build time** (when the code is compiled), not at runtime. If you added `REACT_APP_API_URL` in Netlify settings *after* your first deploy, Netlify is still using the old build.
+- Go to the **Deploys** tab in your Netlify site dashboard.
+- Click the **"Trigger deploy"** dropdown button on the right.
+- Select **"Clear cache and deploy site"**.
+
+### 2. Check the Environment Variable Names & Formats
+- In **Netlify**:
+  - Key must be exactly: `REACT_APP_API_URL`
+  - Value must be exactly: `https://your-backend-app.onrender.com` (Do **NOT** add a trailing slash `/` and do **NOT** add `/api`).
+- In **Render**:
+  - Key must be exactly: `FRONTEND_URL`
+  - Value must be exactly: `https://your-site-name.netlify.app` (Match your Netlify URL, no trailing slash).
+
+### 3. Render Wake-up Time
+Render's free tier puts your backend server to sleep after 15 minutes of inactivity. When you visit the site for the first time, it can take up to 50 seconds to wake up. Wait 1 minute, refresh the page, and try again.
+
+---
+
+🎉 **Done! Your React app and Express backend are now successfully connected and running on Netlify and Render.**
