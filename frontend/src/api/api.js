@@ -14,7 +14,7 @@ const API_BASE_URL = envApiUrl;
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000,
+  timeout: 120000, // 120 seconds (2 minutes) to allow time for Whisper fallback transcription
 });
 
 export const transcriptAPI = {
