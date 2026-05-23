@@ -19,7 +19,7 @@ Render is ideal for hosting the Express backend server.
    - **Branch**: `main`
    - **Root Directory**: `backend` (⚠️ *Crucial: do not leave empty!*)
    - **Runtime**: `Node`
-   - **Build Command**: `npm install`
+   - **Build Command**: `npm install && pip install yt-dlp`
    - **Start Command**: `node server.js`
 4. **Select Plan**: Choose the **Free** plan.
 5. **Add Environment Variables**:
