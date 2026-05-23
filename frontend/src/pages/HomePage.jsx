@@ -106,7 +106,11 @@ export const HomePage = ({ onNavigate, onResultReady }) => {
       } else if (err.response?.status === 403) {
         errorMessage = '❌ ' + (err.response?.data?.error || 'Subtitles are disabled for this video.');
       } else if (!err.response) {
-        errorMessage = '❌ Cannot connect to server. Make sure the backend is running on port 5000.';
+        if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+          errorMessage = '❌ Cannot connect to server. Make sure the backend is running on port 5000.';
+        } else {
+          errorMessage = '❌ Cannot connect to server. The backend server (Render) might be sleeping or waking up. Please wait 15 seconds and try again.';
+        }
       }
       
       setError(errorMessage);
