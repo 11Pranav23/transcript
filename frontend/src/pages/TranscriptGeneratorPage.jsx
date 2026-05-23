@@ -6,7 +6,7 @@ import { TranscriptViewer, TranscriptExportOptions, TranscriptTabs } from '../co
 import Logo from '../components/Logo';
 import { io } from 'socket.io-client';
 
-let socketUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+let socketUrl = process.env.REACT_APP_API_URL || 'https://transcript-9f8a.onrender.com';
 if (socketUrl.endsWith('/api')) {
   socketUrl = socketUrl.substring(0, socketUrl.length - 4);
 }
@@ -44,7 +44,7 @@ export const TranscriptGeneratorPage = ({ onResultReady }) => {
       /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
       /^([a-zA-Z0-9_-]{11})$/
     ];
-    
+
     for (const pattern of patterns) {
       const match = url.match(pattern);
       if (match) return match[1];
@@ -82,7 +82,7 @@ export const TranscriptGeneratorPage = ({ onResultReady }) => {
 
   const handleGenerateTranscript = async (e) => {
     e.preventDefault();
-    
+
     if (!youtubeUrl.trim()) {
       setError('Please enter a YouTube URL');
       return;
@@ -95,7 +95,7 @@ export const TranscriptGeneratorPage = ({ onResultReady }) => {
 
     try {
       const response = await transcriptAPI.fetchTranscript(youtubeUrl, language);
-      
+
       let fetchedMetadata = null;
       const videoId = validateYouTubeUrl(youtubeUrl);
       if (videoId) {
@@ -119,10 +119,10 @@ export const TranscriptGeneratorPage = ({ onResultReady }) => {
         }
 
         setTranscript(response.data.transcript);
-        setMetadata({ 
-          ...fetchedMetadata, 
+        setMetadata({
+          ...fetchedMetadata,
           transcriptLanguage: response.data.language,
-          isTranslated: response.data.isTranslated 
+          isTranslated: response.data.isTranslated
         });
         setProgressMessage('');
         setSuccess('Subtitles fetched successfully!');
@@ -139,7 +139,7 @@ export const TranscriptGeneratorPage = ({ onResultReady }) => {
 
   const handleGenerateDubbing = async (e) => {
     e.preventDefault();
-    
+
     if (!youtubeUrl.trim() || language === 'auto') {
       setError('Please enter a YouTube URL and select a specific target language (Not Auto Detect).');
       return;
@@ -153,7 +153,7 @@ export const TranscriptGeneratorPage = ({ onResultReady }) => {
 
     try {
       const response = await dubbingAPI.generateDub(youtubeUrl, language, socket.id);
-      
+
       if (response.data && response.data.audioUrl) {
         setDubbedAudioUrl(`http://localhost:5000${response.data.audioUrl}`);
         setSuccess('Dubbed audio generated successfully!');
@@ -211,7 +211,7 @@ export const TranscriptGeneratorPage = ({ onResultReady }) => {
     try {
       let response;
       const fileName = metadata?.title || 'transcript';
-      
+
       switch (format) {
         case 'text':
           response = await exportAPI.downloadText(transcript, fileName);
@@ -234,7 +234,7 @@ export const TranscriptGeneratorPage = ({ onResultReady }) => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       setSuccess(`Exported as ${format.toUpperCase()}`);
     } catch (err) {
       setError('Failed to export transcript');
@@ -245,7 +245,7 @@ export const TranscriptGeneratorPage = ({ onResultReady }) => {
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white relative">
       <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500 rounded-full opacity-5 blur-3xl animate-pulse"></div>
       <div className="max-w-7xl mx-auto px-4 py-16 relative z-10">
-        
+
         {/* Header */}
         <div className="mb-12">
           <h1 className="text-5xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-indigo-400 mb-4">
@@ -303,7 +303,7 @@ export const TranscriptGeneratorPage = ({ onResultReady }) => {
               {loading ? <LoadingSpinner /> : null}
               {loading ? '⏳ Processing...' : 'Generate Transcript'}
             </button>
-            
+
             <button
               onClick={handleGenerateDubbing}
               disabled={dubbingLoading}
@@ -318,28 +318,28 @@ export const TranscriptGeneratorPage = ({ onResultReady }) => {
 
         {dubbingProgress.status && (
           <div className="mb-8 p-6 bg-slate-900 border-2 border-emerald-500/30 rounded-xl relative overflow-hidden">
-             <div className="absolute top-0 left-0 h-1 bg-emerald-500 transition-all duration-500" style={{ width: `${dubbingProgress.progress}%` }}></div>
-             <div className="flex items-center gap-3 text-emerald-400 font-semibold text-lg relative z-10">
-               <LoadingSpinner />
-               <span>{dubbingProgress.status}</span>
-               <span className="ml-auto">{dubbingProgress.progress}%</span>
-             </div>
+            <div className="absolute top-0 left-0 h-1 bg-emerald-500 transition-all duration-500" style={{ width: `${dubbingProgress.progress}%` }}></div>
+            <div className="flex items-center gap-3 text-emerald-400 font-semibold text-lg relative z-10">
+              <LoadingSpinner />
+              <span>{dubbingProgress.status}</span>
+              <span className="ml-auto">{dubbingProgress.progress}%</span>
+            </div>
           </div>
         )}
 
         {dubbedAudioUrl && (
           <div className="mb-8 p-6 bg-slate-800 rounded-xl border border-slate-700 space-y-4">
-             <h3 className="text-xl font-bold flex items-center gap-2 text-white">
-               <span className="text-emerald-500">🎧</span> Your Dubbed Audio Track
-             </h3>
-             <audio controls src={dubbedAudioUrl} className="w-full h-12 rounded-lg"></audio>
-             <a
-               href={dubbedAudioUrl}
-               download
-               className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm font-semibold transition"
-             >
-               ⬇️ Download MP3
-             </a>
+            <h3 className="text-xl font-bold flex items-center gap-2 text-white">
+              <span className="text-emerald-500">🎧</span> Your Dubbed Audio Track
+            </h3>
+            <audio controls src={dubbedAudioUrl} className="w-full h-12 rounded-lg"></audio>
+            <a
+              href={dubbedAudioUrl}
+              download
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm font-semibold transition"
+            >
+              ⬇️ Download MP3
+            </a>
           </div>
         )}
 

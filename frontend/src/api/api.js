@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-let envApiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+let envApiUrl = process.env.REACT_APP_API_URL || 'https://transcript-9f8a.onrender.com';
 if (envApiUrl && !envApiUrl.endsWith('/api')) {
   envApiUrl = envApiUrl.replace(/\/$/, '') + '/api';
 }
