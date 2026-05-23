@@ -1,6 +1,12 @@
 import axios from 'axios';
 
 let envApiUrl = process.env.REACT_APP_API_URL || 'https://transcript-9f8a.onrender.com';
+
+// Automatically target local backend when testing on localhost
+if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+  envApiUrl = 'http://localhost:5000';
+}
+
 if (envApiUrl && !envApiUrl.endsWith('/api')) {
   envApiUrl = envApiUrl.replace(/\/$/, '') + '/api';
 }

@@ -7,6 +7,12 @@ import Logo from '../components/Logo';
 import { io } from 'socket.io-client';
 
 let socketUrl = process.env.REACT_APP_API_URL || 'https://transcript-9f8a.onrender.com';
+
+// Automatically target local backend when testing on localhost
+if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+  socketUrl = 'http://localhost:5000';
+}
+
 if (socketUrl.endsWith('/api')) {
   socketUrl = socketUrl.substring(0, socketUrl.length - 4);
 }
